@@ -1,0 +1,63 @@
+# Core
+sqlalchemy>=2.0.0
+apscheduler>=3.10.0
+pyyaml>=6.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+Pillow>=10.0.0
+click>=8.0.0
+rich>=13.0.0
+schedule>=1.2.0
+
+# Web UI
+flask>=3.0.0
+flask-socketio>=5.3.0
+flask-login>=0.6.0
+flask-wtf>=1.2.0
+python-socketio>=5.10.0
+eventlet>=0.33.0
+gunicorn>=21.0.0
+
+# Instagram
+instagrapi>=2.0.0
+
+# Social
+tweepy>=4.14.0
+facebook-sdk>=3.1.0
+
+# AI/ML
+transformers>=4.36.0
+torch>=2.1.0
+torchvision>=0.16.0
+ollama>=0.1.0
+sentence-transformers>=2.2.0
+pillow-heif>=0.13.0
+rembg>=2.0.0
+real-esrgan>=0.3.0
+opencv-python>=4.8.0
+scikit-image>=0.22.0
+imagehash>=4.3.0
+
+# Scraping/Fetching
+praw>=7.7.0
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+aiohttp>=3.9.0
+feedparser>=6.0.0
+youtube-dl>=2021.12.17
+yt-dlp>=2023.0.0
+pyshorteners>=1.0.0
+
+# Notifications
+python-telegram-bot>=20.0
+discord-webhook>=1.2.0
+
+# Security
+cryptography>=41.0.0
+python-dotenv>=1.0.0
+
+# Utils
+schedule>=1.2.0
+tqdm>=4.66.0
+py7zr>=0.20.0

@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "instaforge"
+version = "2.1.0"
+description = "Advanced Instagram automation platform with AI scheduling, multi-source fetching, and anti-ban protection"
+readme = "README.md"
+authors = [
+    {name = "Aman", email = "aman@instaforge.dev"},
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Framework :: Flask",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+keywords = ["instagram", "automation", "social-media", "scheduler", "ai"]
+
+[project.urls]
+Homepage = "https://github.com/aman/instaforge"
+Repository = "https://github.com/aman/instaforge"
+Documentation = "https://instaforge.dev/docs"
+"Bug Tracker" = "https://github.com/aman/instaforge/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "flake8>=7.0", "black>=24.0", "pre-commit>=3.0"]
+ai = ["transformers>=4.36.0", "torch>=2.1.0", "ollama>=0.1.0"]
+all = ["instaforge[dev,ai]"]
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]

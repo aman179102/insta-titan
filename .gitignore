@@ -1,0 +1,50 @@
+# InstaAuto .gitignore
+
+# Data
+data/
+*.db
+
+# Sessions
+sessions/
+
+# Downloads
+data/downloads/
+
+# Images
+images/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+venv/
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Config template
+config.yaml.example
+
+# Vault
+*.enc
+
+# Docker
+.docker/
