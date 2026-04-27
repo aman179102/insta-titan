@@ -1,0 +1,222 @@
+app:
+  name: InstaAuto
+  version: 1.0.0
+  data_dir: ./data
+  log_level: INFO
+
+instagram:
+  accounts:
+    - username: ""
+      password: ""
+      enabled: true
+      max_posts_per_day: 3
+  session_dir: ./sessions
+
+scheduler:
+  enabled: true
+  max_posts_per_day: 3
+  min_interval_minutes: 240
+  max_interval_minutes: 480
+  active_hours_start: 10
+  active_hours_end: 22
+  timezone: Asia/Kolkata
+  gradual_warmup: true
+  warmup_days: 7
+  cooldown_on_error: true
+  cooldown_hours: 24
+  random_caption_variation: true
+  hashtag_rotation: true
+
+sources:
+  reddit:
+    enabled: false
+    client_id: ""
+    client_secret: ""
+    user_agent: "InstaAuto/1.0"
+    subreddits:
+      - natureporn
+      - earthporn
+      - itookapicture
+      - wallpapers
+    sort: top
+    time_filter: week
+    limit: 50
+    min_score: 100
+
+  unsplash:
+    enabled: true
+    access_key: ""
+    queries:
+      - nature
+      - landscape
+      - city
+      - wildlife
+      - technology
+    per_page: 30
+    orientation: landscape
+
+  pexels:
+    enabled: false
+    api_key: ""
+    queries:
+      - nature
+      - mountains
+      - ocean
+      - forest
+      - architecture
+    per_page: 30
+
+  pixabay:
+    enabled: false
+    api_key: ""
+    queries:
+      - nature
+      - sunset
+      - travel
+      - animals
+      - food
+    per_page: 30
+    image_type: photo
+    orientation: horizontal
+    safesearch: true
+
+  bing:
+    enabled: false
+    api_key: ""
+    queries:
+      - beautiful landscape
+      - stunning nature
+      - city skyline
+    per_page: 30
+
+  google_images:
+    enabled: false
+    queries:
+      - beautiful nature photography
+      - stunning landscapes
+    per_page: 30
+    safe: active
+
+  duckduckgo:
+    enabled: false
+    queries:
+      - nature photography
+      - landscape
+    per_page: 30
+
+  local:
+    enabled: false
+    path: ./images
+    recursive: true
+    watch: false
+    valid_extensions:
+      - .jpg
+      - .jpeg
+      - .png
+      - .webp
+      - .bmp
+
+  rss:
+    enabled: false
+    feeds:
+      - https://www.reddit.com/r/EarthPorn/.rss
+    limit: 20
+
+filters:
+  pipeline:
+    - keyword
+    - nsfw
+    - quality
+    - resolution
+    - duplicate
+
+  keywords_allow: []
+  keywords_block:
+    - nsfw
+    - gore
+    - violence
+    - porn
+    - adult
+  nsfw_threshold: 0.7
+  min_width: 640
+  min_height: 640
+  min_quality_score: 3.0
+  max_file_size_mb: 20
+  allow_duplicates: false
+
+processor:
+  auto_enhance: false
+  max_size_mb: 10
+  optimize_quality: 85
+  add_watermark: false
+  watermark_text: "@instaauto"
+  watermark_opacity: 0.3
+  resize_to_instagram: true
+  strip_exif: true
+
+ai:
+  enabled: false
+  caption_generator: true
+  tag_generator: true
+  nsfw_detector: false
+  quality_scorer: false
+  duplicate_detector: true
+  background_removal: false
+  image_upscaling: false
+  ollama_model: "llama3.2"
+  ollama_host: "http://localhost:11434"
+  stable_diffusion:
+    enabled: false
+    model: "runwayml/stable-diffusion-v1-5"
+    negative_prompt: "blurry, bad quality, distorted"
+
+twitter:
+  enabled: false
+  api_key: ""
+  api_secret: ""
+  access_token: ""
+  access_secret: ""
+
+facebook:
+  enabled: false
+  page_id: ""
+  access_token: ""
+
+telegram:
+  bot_token: ""
+  chat_id: ""
+
+notifications:
+  enabled: true
+  console: true
+  telegram:
+    enabled: false
+  discord:
+    enabled: false
+    webhook_url: ""
+  email:
+    enabled: false
+    smtp_server: ""
+    smtp_port: 587
+    sender: ""
+    password: ""
+    recipients: []
+
+security:
+  encrypt_sessions: true
+  encrypt_credentials: true
+  proxy:
+    enabled: false
+    type: http
+    url: ""
+  user_agent_rotation: true
+  request_delay_min: 1.0
+  request_delay_max: 3.0
+
+web_ui:
+  enabled: true
+  host: 0.0.0.0
+  port: 5000
+  debug: false
+  secret_key: "change-this-to-random-secret"
+  dark_mode: true
