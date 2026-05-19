@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InstaAuto - Instagram Automation</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-5.3.0-dark.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.0/socket.io.min.js"></script>
+    <style>
+        body { background: #0a0a0f; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .sidebar { background: #12121a; min-height: 100vh; border-right: 1px solid #1e1e2e; }
+        .sidebar .nav-link { color: #888; padding: 12px 20px; border-radius: 0; transition: all 0.2s; }
+        .sidebar .nav-link:hover { color: #fff; background: #1a1a2e; }
+        .sidebar .nav-link.active { color: #00d4ff; background: #1a1a2e; border-left: 3px solid #00d4ff; }
+        .sidebar .nav-link i { margin-right: 10px; width: 20px; text-align: center; }
+        .card { background: #14141e; border: 1px solid #1e1e30; border-radius: 12px; }
+        .card-header { background: #1a1a26; border-bottom: 1px solid #1e1e30; font-weight: 600; }
+        .stat-card { background: linear-gradient(135deg, #14141e, #1a1a2e); border: 1px solid #1e1e30; border-radius: 12px; padding: 20px; }
+        .stat-value { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, #00d4ff, #7b2ff7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .badge-queued { background: #2d3748; color: #a0aec0; }
+        .badge-posted { background: #1a4731; color: #68d391; }
+        .badge-failed { background: #471a1a; color: #fc8181; }
+        .btn-primary { background: linear-gradient(135deg, #00d4ff, #7b2ff7); border: none; }
+        .btn-primary:hover { background: linear-gradient(135deg, #00b8e6, #6a26d9); }
+        .table { color: #e0e0e0; }
+        .table th { border-color: #1e1e30; color: #888; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
+        .table td { border-color: #1e1e30; vertical-align: middle; }
+        .form-control, .form-select { background: #1a1a26; border: 1px solid #2a2a3e; color: #e0e0e0; }
+        .form-control:focus, .form-select:focus { background: #1a1a26; border-color: #00d4ff; box-shadow: 0 0 0 0.2rem rgba(0,212,255,0.1); }
+        .modal-content { background: #14141e; border: 1px solid #1e1e30; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0f; }
+        ::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 3px; }
+        .glow { box-shadow: 0 0 20px rgba(0,212,255,0.1); }
+        .navbar-brand { font-weight: 800; background: linear-gradient(135deg, #00d4ff, #7b2ff7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .live-dot { width: 8px; height: 8px; background: #00ff88; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar p-0">
+                <div class="p-3">
+                    <h4 class="navbar-brand mb-4"><i class="bi bi-instagram"></i> InstaAuto</h4>
+                </div>
+                <nav class="nav flex-column">
+                    <a class="nav-link {% if active == 'dashboard' %}active{% endif %}" href="/">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    <a class="nav-link {% if active == 'queue' %}active{% endif %}" href="/queue">
+                        <i class="bi bi-list-ul"></i> Queue <span class="badge bg-primary rounded-pill queue-count">0</span>
+                    </a>
+                    <a class="nav-link {% if active == 'history' %}active{% endif %}" href="/history">
+                        <i class="bi bi-clock-history"></i> History
+                    </a>
+                    <a class="nav-link {% if active == 'analytics' %}active{% endif %}" href="/analytics">
+                        <i class="bi bi-graph-up"></i> Analytics
+                    </a>
+                    <a class="nav-link {% if active == 'config' %}active{% endif %}" href="/config">
+                        <i class="bi bi-gear"></i> Settings
+                    </a>
+                    <hr style="border-color:#1e1e30">
+                    <a class="nav-link" href="/logs">
+                        <i class="bi bi-terminal"></i> Logs
+                    </a>
+                </nav>
+            </div>
+            <div class="col-md-10 p-4">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const socket = io();
+        setInterval(() => {
+            fetch('/api/scheduler/status').then(r => r.json()).then(d => {
+                const el = document.querySelector('.queue-count');
+                if (el) el.textContent = d.queue_count || 0;
+            });
+        }, 5000);
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
