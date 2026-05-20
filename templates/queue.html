@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-list-ul me-2"></i> Post Queue</h2>
+    <div>
+        <button class="btn btn-sm btn-outline-danger me-2" onclick="clearQueue()"><i class="bi bi-trash"></i> Clear</button>
+        <button class="btn btn-sm btn-primary" onclick="fetchImages()"><i class="bi bi-cloud-download"></i> Fetch More</button>
+    </div>
+</div>
+
+<div class="card glow">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:40px">#</th>
+                        <th>Image</th>
+                        <th>Caption</th>
+                        <th>Source</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Added</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="queue-list">
+                    <tr><td colspan="8" class="text-center text-muted py-4">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function loadQueue() {
+    fetch('/api/queue').then(r=>r.json()).then(items => {
+        const tbody = document.getElementById('queue-list');
+        if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Queue is empty. Fetch some images!</td></tr>';
+            return;
+        }
+        tbody.innerHTML = items.map((item, i) => `
+            <tr>
+                <td>${i+1}</td>
+                <td><img src="/image/${encodeURIComponent(item.image_path)}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;" onerror="this.style.display='none'"></td>
+                <td><small>${item.caption || 'Untitled'}</small></td>
+                <td><span class="badge bg-secondary">${item.source}</span></td>
+                <td>${item.priority}</td>
+                <td><span class="badge badge-${item.status}">${item.status}</span></td>
+                <td><small class="text-muted">${new Date(item.created_at).toLocaleDateString()}</small></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteItem(${item.id})"><i class="bi bi-x"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    });
+}
+
+function deleteItem(id) {
+    if (!confirm('Delete this item from queue?')) return;
+    fetch('/api/queue/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})})
+    .then(r=>r.json()).then(d=>{ if(d.success) loadQueue(); });
+}
+
+function clearQueue() {
+    if (!confirm('Clear entire queue?')) return;
+    fetch('/api/queue/clear', {method:'POST'}).then(r=>r.json()).then(d=>{ if(d.success) loadQueue(); });
+}
+
+function fetchImages() {
+    fetch('/api/fetch', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source:'all'})})
+    .then(r=>r.json()).then(d=>{ alert(`Fetched ${d.fetched} images!`); loadQueue(); });
+}
+
+loadQueue();
+setInterval(loadQueue, 15000);
+</script>
+{% endblock %}
