@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-gear me-2"></i> Settings</h2>
+    <button class="btn btn-primary" onclick="saveConfig()"><i class="bi bi-floppy"></i> Save</button>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card glow mb-3">
+            <div class="card-header"><i class="bi bi-instagram me-2"></i> Instagram Accounts</div>
+            <div class="card-body">
+                <div id="accounts-list"></div>
+                <button class="btn btn-sm btn-outline-primary mt-2" onclick="addAccount()"><i class="bi bi-plus"></i> Add Account</button>
+            </div>
+        </div>
+
+        <div class="card glow mb-3">
+            <div class="card-header"><i class="bi bi-clock me-2"></i> Scheduler</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Posts Per Day</label>
+                    <input type="number" class="form-control" id="sched-posts" value="{{ config.scheduler.max_posts_per_day }}">
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label class="form-label">Active Start (Hour)</label>
+                        <input type="number" class="form-control" id="sched-start" value="{{ config.scheduler.active_hours_start }}">
+                    </div>
+                    <div class="col">
+                        <label class="form-label">Active End (Hour)</label>
+                        <input type="number" class="form-control" id="sched-end" value="{{ config.scheduler.active_hours_end }}">
+                    </div>
+                </div>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="sched-warmup" {% if config.scheduler.gradual_warmup %}checked{% endif %}>
+                    <label class="form-check-label">Gradual Warmup</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card glow mb-3">
+            <div class="card-header"><i class="bi bi-filter me-2"></i> Filters</div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <label class="form-label">Blocked Keywords (comma separated)</label>
+                    <input type="text" class="form-control" id="filter-block" value="{{ config.filters.keywords_block | join(', ') }}">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Min Resolution</label>
+                    <div class="row">
+                        <div class="col"><input type="number" class="form-control" id="filter-minw" value="{{ config.filters.min_width }}" placeholder="Width"></div>
+                        <div class="col"><input type="number" class="form-control" id="filter-minh" value="{{ config.filters.min_height }}" placeholder="Height"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card glow mb-3">
+            <div class="card-header"><i class="bi bi-cloud me-2"></i> Source Toggles</div>
+            <div class="card-body" id="source-toggles"></div>
+        </div>
+
+        <div class="card glow mb-3">
+            <div class="card-header"><i class="bi bi-bell me-2"></i> Notifications</div>
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="notif-console" {% if config.notifications.console %}checked{% endif %}>
+                    <label class="form-check-label">Console Notifications</label>
+                </div>
+                <div class="mb-2 mt-2">
+                    <label class="form-label">Telegram Bot Token</label>
+                    <input type="password" class="form-control" id="tg-token" value="{{ config.notifications.telegram.bot_token }}">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Telegram Chat ID</label>
+                    <input type="text" class="form-control" id="tg-chat" value="{{ config.notifications.telegram.chat_id }}">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function loadConfig() {
+    fetch('/api/config').then(r=>r.json()).then(cfg => {
+        const srcDiv = document.getElementById('source-toggles');
+        const sources = cfg.sources || {};
+        srcDiv.innerHTML = Object.entries(sources).map(([name, s]) => `
+            <div class="form-check">
+                <input class="form-check-input source-toggle" type="checkbox" data-source="${name}" ${s.enabled ? 'checked' : ''}>
+                <label class="form-check-label">${name.charAt(0).toUpperCase() + name.slice(1)}</label>
+            </div>
+        `).join('');
+
+        const accDiv = document.getElementById('accounts-list');
+        const accounts = cfg.instagram?.accounts || [];
+        accDiv.innerHTML = accounts.map((a, i) => `
+            <div class="mb-2 p-2" style="background:#1a1a26;border-radius:8px;">
+                <div class="row g-2 align-items-center">
+                    <div class="col"><input class="form-control form-control-sm" placeholder="Username" value="${a.username || ''}" data-idx="${i}" data-field="username"></div>
+                    <div class="col"><input type="password" class="form-control form-control-sm" placeholder="Password" value="${a.password || ''}" data-idx="${i}" data-field="password"></div>
+                    <div class="col-auto">
+                        <div class="form-check">
+                            <input class="form-check-input account-enabled" type="checkbox" data-idx="${i}" ${a.enabled ? 'checked' : ''}>
+                        </div>
+                    </div>
+                    <div class="col-auto"><button class="btn btn-sm btn-outline-danger" onclick="this.closest('.mb-2').remove()"><i class="bi bi-x"></i></button></div>
+                </div>
+            </div>
+        `).join('');
+    });
+}
+
+function addAccount() {
+    const div = document.getElementById('accounts-list');
+    const idx = div.children.length;
+    const el = document.createElement('div');
+    el.className = 'mb-2 p-2';
+    el.style.background = '#1a1a26';
+    el.style.borderRadius = '8px';
+    el.innerHTML = `
+        <div class="row g-2 align-items-center">
+            <div class="col"><input class="form-control form-control-sm" placeholder="Username" data-idx="${idx}" data-field="username"></div>
+            <div class="col"><input type="password" class="form-control form-control-sm" placeholder="Password" data-idx="${idx}" data-field="password"></div>
+            <div class="col-auto"><button class="btn btn-sm btn-outline-danger" onclick="this.closest('.mb-2').remove()"><i class="bi bi-x"></i></button></div>
+        </div>
+    `;
+    div.appendChild(el);
+}
+
+function saveConfig() {
+    fetch('/api/config').then(r=>r.json()).then(cfg => {
+        cfg.scheduler.max_posts_per_day = parseInt(document.getElementById('sched-posts').value) || 3;
+        cfg.scheduler.active_hours_start = parseInt(document.getElementById('sched-start').value) || 10;
+        cfg.scheduler.active_hours_end = parseInt(document.getElementById('sched-end').value) || 22;
+        cfg.scheduler.gradual_warmup = document.getElementById('sched-warmup').checked;
+        cfg.filters.keywords_block = document.getElementById('filter-block').value.split(',').map(s=>s.trim()).filter(Boolean);
+        cfg.filters.min_width = parseInt(document.getElementById('filter-minw').value) || 640;
+        cfg.filters.min_height = parseInt(document.getElementById('filter-minh').value) || 640;
+        cfg.notifications.console = document.getElementById('notif-console').checked;
+        cfg.notifications.telegram.bot_token = document.getElementById('tg-token').value;
+        cfg.notifications.telegram.chat_id = document.getElementById('tg-chat').value;
+
+        document.querySelectorAll('.source-toggle').forEach(el => {
+            const name = el.dataset.source;
+            if (cfg.sources[name]) cfg.sources[name].enabled = el.checked;
+        });
+
+        const accounts = [];
+        document.querySelectorAll('#accounts-list .mb-2').forEach(div => {
+            const username = div.querySelector('[data-field="username"]')?.value || '';
+            const password = div.querySelector('[data-field="password"]')?.value || '';
+            const enabled = div.querySelector('.account-enabled')?.checked || false;
+            if (username) accounts.push({username, password, enabled, max_posts_per_day: 3});
+        });
+        cfg.instagram.accounts = accounts;
+
+        fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)})
+        .then(r=>r.json()).then(d=>{
+            if(d.success) alert('Settings saved! Restart scheduler for changes to take effect.');
+        });
+    });
+}
+
+loadConfig();
+</script>
+{% endblock %}
