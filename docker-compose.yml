@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  instaauto:
+    build: .
+    container_name: instaauto
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./data:/app/data
+      - ./sessions:/app/sessions
+      - ./images:/app/images
+    environment:
+      - TZ=Asia/Kolkata
+      - PYTHONUNBUFFERED=1
