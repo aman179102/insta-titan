@@ -3,12 +3,12 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "instaforge"
+name = "instatitan"
 version = "2.1.0"
 description = "Advanced Instagram automation platform with AI scheduling, multi-source fetching, and anti-ban protection"
 readme = "README.md"
 authors = [
-    {name = "Aman", email = "aman@instaforge.dev"},
+    {name = "Aman", email = "aman@instatitan.dev"},
 ]
 license = {text = "MIT"}
 classifiers = [
@@ -31,15 +31,15 @@ classifiers = [
 keywords = ["instagram", "automation", "social-media", "scheduler", "ai"]
 
 [project.urls]
-Homepage = "https://github.com/aman/instaforge"
-Repository = "https://github.com/aman/instaforge"
-Documentation = "https://instaforge.dev/docs"
-"Bug Tracker" = "https://github.com/aman/instaforge/issues"
+Homepage = "https://github.com/aman/instatitan"
+Repository = "https://github.com/aman/instatitan"
+Documentation = "https://instatitan.dev/docs"
+"Bug Tracker" = "https://github.com/aman/instatitan/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "flake8>=7.0", "black>=24.0", "pre-commit>=3.0"]
 ai = ["transformers>=4.36.0", "torch>=2.1.0", "ollama>=0.1.0"]
-all = ["instaforge[dev,ai]"]
+all = ["instatitan[dev,ai]"]
 
 [tool.setuptools.packages.find]
 include = ["src*"]

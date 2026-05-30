@@ -22,5 +22,5 @@ Examples of behavior that contributes to a positive environment:
 ## Enforcement
 
 Project maintainers are responsible for clarifying and enforcing standards.
-Instances of unacceptable behavior may be reported to conduct@instaforge.dev.
+Instances of unacceptable behavior may be reported to conduct@instatitan.dev.
 All complaints will be reviewed and investigated promptly and fairly.

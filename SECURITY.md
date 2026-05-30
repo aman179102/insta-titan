@@ -12,7 +12,7 @@
 We take security seriously. If you discover a security vulnerability, please:
 
 1. **Do NOT** open a public issue
-2. Send an email to security@instaforge.dev
+2. Send an email to security@instatitan.dev
 3. Include detailed steps to reproduce the issue
 4. Allow 48 hours for initial response
 

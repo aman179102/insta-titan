@@ -1,4 +1,4 @@
-# Contributing to InstaForge
+# Contributing to InstaTitan
 
 Thank you for considering contributing! Here's how to get started:
 
@@ -6,8 +6,8 @@ Thank you for considering contributing! Here's how to get started:
 
 ```bash
 # Clone and setup
-git clone https://github.com/aman/instaforge.git
-cd instaforge
+git clone https://github.com/aman/instatitan.git
+cd instatitan
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt

@@ -1,6 +1,6 @@
 <div align="center">
   <br/>
-  <h1>⚡ InstaForge</h1>
+  <h1>⚡ InstaTitan</h1>
   <p><strong>AI-Powered Instagram Automation Platform</strong></p>
   <p>
     <em>Multi-source • Smart Scheduling • Anti-Ban • AI Captions • Web UI • 100% Free</em>
@@ -20,7 +20,7 @@
 
 ## 🚀 Overview
 
-**InstaForge** is an enterprise-grade Instagram automation platform that fetches images from **9+ sources**, processes them through an **AI-powered pipeline**, and posts them automatically with **smart scheduling** to avoid account restrictions.
+**InstaTitan** is an enterprise-grade Instagram automation platform that fetches images from **9+ sources**, processes them through an **AI-powered pipeline**, and posts them automatically with **smart scheduling** to avoid account restrictions.
 
 Built for creators, marketers, and developers who want zero-touch Instagram content management — completely free, open-source, and self-hosted.
 
@@ -91,8 +91,8 @@ Built for creators, marketers, and developers who want zero-touch Instagram cont
 
 ```bash
 # Clone
-git clone https://github.com/aman/instaforge.git
-cd instaforge
+git clone https://github.com/aman/instatitan.git
+cd instatitan
 
 # Setup
 python3 -m venv venv
@@ -181,7 +181,7 @@ python -m pytest tests/       # Alternative runner
 ## 🏗️ Architecture
 
 ```
-instaforge/
+instatitan/
 ├── main.py                 # CLI entry point
 ├── app.py                  # Flask web application
 ├── config.yaml             # YAML configuration
