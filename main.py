@@ -74,21 +74,11 @@ Examples:
         pinger_thread = threading.Thread(target=_self_pinger, args=(config,), daemon=True)
         pinger_thread.start()
 
-        telegram_thread = threading.Thread(target=_start_telegram, args=(config, db, fetcher, poster, scheduler), daemon=True)
-        telegram_thread.start()
+        status_thread = threading.Thread(target=_status_logger, args=(db,), daemon=True)
+        status_thread.start()
 
-        logger.info("InstaAuto is running. Press Ctrl+C to stop.")
-
-        try:
-            while True:
-                time.sleep(60)
-                queue_count = db.queue_count()
-                posted_today = db.posts_posted_today()
-                logger.info(f"Status: {queue_count} queued | {posted_today} posted today")
-        except KeyboardInterrupt:
-            logger.info("Shutting down...")
-            scheduler.stop()
-            logger.info("Goodbye! 👋")
+        logger.info("🤖 Telegram Bot starting (main thread)...")
+        _start_telegram(config, db, fetcher, poster, scheduler)
 
     elif cmd == "web":
         web_config = config.get("web_ui", {})
@@ -182,6 +172,14 @@ Examples:
 
     else:
         parser.print_help()
+
+
+def _status_logger(db):
+    while True:
+        time.sleep(60)
+        queue_count = db.queue_count()
+        posted_today = db.posts_posted_today()
+        logger.info(f"Status: {queue_count} queued | {posted_today} posted today")
 
 
 def _start_telegram(config, db, fetcher, poster, scheduler):
