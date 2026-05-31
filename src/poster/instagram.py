@@ -7,7 +7,7 @@ from typing import Optional, List
 from instagrapi import Client
 from instagrapi.exceptions import (
     LoginRequired, ChallengeRequired, PleaseWaitFewMinutes,
-    TwoFactorRequired, ClientError, ReloginAttemptExceeded
+    TwoFactorRequired, ClientError, ReloginAttemptExceeded, BadPassword
 )
 from src.utils.helpers import logger, random_delay
 
@@ -34,6 +34,15 @@ class InstagramPoster:
                 pass
         cl = Client()
         cl.delay_range = [3, 8]
+        cl.set_country_code(91)  # India country code
+        cl.set_locale("en_IN")
+        cl.set_timezone_offset(19800)  # IST = UTC+5:30
+        cl.set_country("IN")
+        cl.set_continent("AS")
+        cl.set_user_agent(
+            "Instagram 329.0.0.0.68 Android (33/13; 440dpi; 1080x2400; "
+            "OnePlus; OnePlus 9RT 5G; OP516BL1; qcom; en_IN; 519036584)"
+        )
         proxy_cfg = self.config.get("security", {}).get("proxy", {})
         if proxy_cfg.get("enabled") and proxy_cfg.get("url"):
             cl.set_proxy(proxy_cfg["url"])
@@ -43,6 +52,11 @@ class InstagramPoster:
                 with open(session_path, "rb") as f:
                     cl = pickle.load(f)
                 cl.delay_range = [3, 8]
+                cl.set_country_code(91)
+                cl.set_locale("en_IN")
+                cl.set_timezone_offset(19800)
+                cl.set_country("IN")
+                cl.set_continent("AS")
                 cl.get_timeline_feed()
                 self.clients[username] = cl
                 logger.info(f"Instagram: Session loaded for {username}")
@@ -57,13 +71,21 @@ class InstagramPoster:
                     self.last_error = f"No password configured for {username}"
                     logger.error(f"Instagram: {self.last_error}")
                     return None
+                login_id = username
+                if self.db:
+                    email = self.db.get_setting("login_email", "")
+                    if email:
+                        login_id = email
                 try:
-                    cl.login(username, password)
+                    cl.login(login_id, password)
                     with open(session_path, "wb") as f:
                         pickle.dump(cl, f)
                     self.clients[username] = cl
                     logger.info(f"Instagram: Logged in as {username}")
                     return cl
+                except BadPassword:
+                    self.last_error = f"Wrong password for {username} — .env ya Render env vars check karo"
+                    logger.error(f"Instagram: {self.last_error}")
                 except ChallengeRequired:
                     self.last_error = f"Instagram challenge required for {username} — /verify CODE se OTP daalein"
                     logger.error(f"Instagram: {self.last_error}")
@@ -83,7 +105,24 @@ class InstagramPoster:
                 except PleaseWaitFewMinutes as e:
                     self.last_error = f"Instagram rate limited: {e}"
                     logger.error(f"Instagram: {self.last_error}")
+                except ClientError as e:
+                    self.last_error = f"Instagram rejected login: {e}"
+                    logger.error(f"Instagram: {self.last_error}")
                 except Exception as e:
+                    err_str = str(e)
+                    if "challenge_required" in err_str.lower():
+                        self.last_error = f"Instagram challenge required for {username} — /verify CODE se OTP daalein"
+                        logger.error(f"Instagram: {self.last_error}")
+                        self.pending_challenge[username] = cl
+                        if self.notify_callback:
+                            self.notify_callback(
+                                f"🔐 *Instagram OTP Required!*\n\n"
+                                f"Account: `{username}`\n"
+                                f"Phone/email pe OTP check karo.\n\n"
+                                f"Phir ye likho:\n"
+                                f"`/verify CODE`"
+                            )
+                        return None
                     self.last_error = f"Login error: {e}"
                     logger.error(f"Instagram: Login failed for {username}: {e}")
                 return None

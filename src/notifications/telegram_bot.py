@@ -277,13 +277,19 @@ class TelegramBot:
             cfg_posts = sched.get("max_posts_per_day", 3)
             current_posts = settings.get("max_posts_per_day", str(cfg_posts))
             current_type = settings.get("default_post_type", "photo")
+            current_email = settings.get("login_email", "")
             msg = (
                 "⚙️ *Current Settings*\n\n"
                 f"📤 Daily posts: `{current_posts}`  (config default: {cfg_posts})\n"
-                f"🖼 Post type:  `{current_type}`\n\n"
-                "*Change karna hai?*\n"
+                f"🖼 Post type:  `{current_type}`\n"
+            )
+            if current_email:
+                msg += f"📧 Login email: `{current_email}`\n"
+            msg += (
+                "\n*Change karna hai?*\n"
                 "`/set daily_posts 5`  — daily post count (1-20)\n"
-                "`/set post_type reel`  — photo / carousel / reel / story"
+                "`/set post_type reel`  — photo / carousel / reel / story\n"
+                "`/set login_email email`  — email se login (agar username fail ho)"
             )
             await update.message.reply_text(msg, parse_mode="Markdown")
         except Exception as e:
@@ -304,7 +310,7 @@ class TelegramBot:
             )
             return
         key, value = args[0].lower(), args[1].lower()
-        valid_keys = {"daily_posts", "post_type"}
+        valid_keys = {"daily_posts", "post_type", "login_email"}
         if key not in valid_keys:
             await update.message.reply_text(f"❌ Invalid key. Use: {', '.join(valid_keys)}")
             return
@@ -316,6 +322,10 @@ class TelegramBot:
             if value not in ("photo", "carousel", "reel", "story"):
                 await update.message.reply_text("❌ Post type must be: photo, carousel, reel, or story")
                 return
+        if key == "login_email":
+            if "@" not in value or "." not in value:
+                await update.message.reply_text("❌ Enter a valid email address")
+                return
         ok = self.db.set_setting(key, value)
         if ok:
             msg = f"✅ `{key}` → `{value}` set kar diya!"
@@ -323,6 +333,8 @@ class TelegramBot:
                 msg += "\n🔄 Scheduler restart ho raha hai..."
                 if self.scheduler:
                     self.scheduler.restart()
+            if key == "login_email":
+                msg += "\n📧 Ab /health karo — login email se try karega"
             await update.message.reply_text(msg, parse_mode="Markdown")
         else:
             await update.message.reply_text("❌ Setting save failed")
