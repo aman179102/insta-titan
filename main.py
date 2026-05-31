@@ -178,22 +178,33 @@ Examples:
 
 
 def _health_server(config, db):
+    import http.server
+    import json as json_mod
+    port = int(os.environ.get("PORT") or config.get("web_ui", {}).get("port", 5000))
+
+    class HealthHandler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/health":
+                data = json_mod.dumps({"status": "ok", "timestamp": time.time()})
+            elif self.path == "/status":
+                q = db.queue_count() if db else 0
+                data = json_mod.dumps({"status": "ok", "queue_count": q})
+            else:
+                self.send_response(404)
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(data.encode())
+
+        def log_message(self, format, *args):
+            pass
+
     try:
-        from flask import Flask, jsonify
-        app = Flask(__name__)
-        port = int(os.environ.get("PORT") or config.get("web_ui", {}).get("port", 5000))
-
-        @app.route("/health")
-        def health():
-            return jsonify({"status": "ok", "timestamp": time.time()})
-
-        @app.route("/status")
-        def status():
-            q = db.queue_count()
-            return jsonify({"status": "ok", "queue_count": q})
-
+        server = http.server.HTTPServer(("0.0.0.0", port), HealthHandler)
         logger.info(f"Health server: http://0.0.0.0:{port}")
-        app.run(host="0.0.0.0", port=port, debug=False)
+        server.serve_forever()
     except Exception as e:
         logger.error(f"Health server failed: {e}")
 
