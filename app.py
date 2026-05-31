@@ -226,6 +226,22 @@ def api_config():
     return jsonify(config)
 
 
+@app.route("/api/ping/stats")
+def api_ping_stats():
+    last_ping = db.get_last_ping()
+    if not last_ping:
+        return jsonify({"last_ping": None, "status": "no_pings_yet"})
+    return jsonify({
+        "last_ping": {
+            "status": last_ping.status,
+            "duration_ms": last_ping.duration_ms,
+            "error_message": last_ping.error_message,
+            "created_at": last_ping.created_at.isoformat() if last_ping.created_at else "",
+        },
+        "status": "active" if last_ping.status == "ok" else "failing",
+    })
+
+
 @app.route("/api/search")
 def api_search():
     q = request.args.get("q", "")
@@ -256,9 +272,13 @@ def _self_pinger():
     logger.info(f"Self-pinger started → pinging {health_url} every 5 min")
     while True:
         try:
+            start = time.time()
             requests.get(health_url, timeout=10)
-            logger.debug(f"Self-ping OK → {health_url}")
+            elapsed = int((time.time() - start) * 1000)
+            db.log_ping(status="ok", duration_ms=elapsed)
+            logger.debug(f"Self-ping OK → {health_url} ({elapsed}ms)")
         except Exception as e:
+            db.log_ping(status="failed", error_message=str(e))
             logger.warning(f"Self-ping failed: {e}")
         time.sleep(300)
 

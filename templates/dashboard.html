@@ -36,6 +36,24 @@
     </div>
 </div>
 
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="stat-card">
+            <div class="stat-label"><i class="bi bi-clock me-1"></i> Last Post</div>
+            <div class="stat-value" id="stat-last-post" style="font-size:1.2rem; background: linear-gradient(135deg, #00d4ff, #7b2ff7); -webkit-background-clip: text;">-</div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="stat-card d-flex justify-content-between align-items-center">
+            <div>
+                <div class="stat-label"><i class="bi bi-activity me-1"></i> Ping Monitor</div>
+                <div class="stat-value" id="stat-ping" style="font-size:1.2rem; background: linear-gradient(135deg, #00ff88, #00d4ff); -webkit-background-clip: text;">Checking...</div>
+            </div>
+            <div id="ping-indicator" style="width:12px;height:12px;border-radius:50%;background:#888;"></div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-3">
     <div class="col-md-8">
         <div class="card glow">
@@ -84,12 +102,32 @@
 
 {% block scripts %}
 <script>
+function timeAgo(dateStr) {
+    if (!dateStr) return 'Never';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+}
+
 function loadStats() {
     fetch('/api/stats').then(r => r.json()).then(d => {
         document.getElementById('stat-queued').textContent = d.total_queued || 0;
         document.getElementById('stat-today').textContent = d.posted_today || 0;
         document.getElementById('stat-total').textContent = d.total_posted || 0;
         document.getElementById('stat-failed').textContent = d.failed || 0;
+
+        const lastPostEl = document.getElementById('stat-last-post');
+        if (d.last_post_at) {
+            lastPostEl.innerHTML = `${timeAgo(d.last_post_at)} <small class="text-muted" style="font-size:0.7rem; -webkit-text-fill-color: #888;">— ${d.last_post_caption || ''}</small>`;
+        } else {
+            lastPostEl.textContent = 'No posts yet';
+        }
+
         const tbody = document.getElementById('recent-posts');
         if (d.recent_posts && d.recent_posts.length) {
             tbody.innerHTML = d.recent_posts.map(p => `
@@ -113,6 +151,28 @@ function loadStats() {
     });
 }
 
+function loadPingStats() {
+    fetch('/api/ping/stats').then(r => r.json()).then(d => {
+        const el = document.getElementById('stat-ping');
+        const dot = document.getElementById('ping-indicator');
+        if (!d.last_ping) {
+            el.textContent = 'No pings yet';
+            dot.style.background = '#888';
+            return;
+        }
+        const ago = timeAgo(d.last_ping.created_at);
+        if (d.last_ping.status === 'ok') {
+            el.innerHTML = `<span style="-webkit-text-fill-color: #00ff88;">✓ ${ago}</span> <small class="text-muted" style="font-size:0.7rem; -webkit-text-fill-color: #888;">(${d.last_ping.duration_ms}ms)</small>`;
+            dot.style.background = '#00ff88';
+            dot.style.boxShadow = '0 0 8px #00ff88';
+        } else {
+            el.innerHTML = `<span style="-webkit-text-fill-color: #ff4444;">✗ ${ago}</span>`;
+            dot.style.background = '#ff4444';
+            dot.style.boxShadow = '0 0 8px #ff4444';
+        }
+    });
+}
+
 function fetchImages() {
     fetch('/api/fetch', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source:'all'})})
     .then(r=>r.json()).then(d=>{
@@ -129,6 +189,8 @@ function postNow() {
 }
 
 loadStats();
+loadPingStats();
 setInterval(loadStats, 10000);
+setInterval(loadPingStats, 30000);
 </script>
 {% endblock %}

@@ -101,6 +101,16 @@ class SchedulerLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class PingLog(Base):
+    __tablename__ = "ping_log"
+
+    id = Column(Integer, primary_key=True)
+    status = Column(String(20), default="ok")
+    response_time_ms = Column(Integer, default=0)
+    error_message = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class Account(Base):
     __tablename__ = "accounts"
 
@@ -271,6 +281,24 @@ class Database:
             session.commit()
         except:
             session.rollback()
+        finally:
+            session.close()
+
+    def log_ping(self, status: str = "ok", duration_ms: int = 0, error_message: str = ""):
+        session = self.get_session()
+        try:
+            entry = PingLog(status=status, duration_ms=duration_ms, error_message=error_message)
+            session.add(entry)
+            session.commit()
+        except:
+            session.rollback()
+        finally:
+            session.close()
+
+    def get_last_ping(self):
+        session = self.get_session()
+        try:
+            return session.query(PingLog).order_by(PingLog.created_at.desc()).first()
         finally:
             session.close()
 

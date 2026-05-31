@@ -41,12 +41,17 @@ class AnalyticsTracker:
                     "total_fetched": s.total_fetched or 0,
                     "total_posted": s.total_posted or 0,
                 }
+            last_post = session.query(PostedHistory).order_by(
+                PostedHistory.posted_at.desc()
+            ).first()
             return {
                 "total_queued": total_queued,
                 "total_posted": total_posted,
                 "posted_today": posted_today,
                 "posted_week": posted_week,
                 "failed": failed,
+                "last_post_at": last_post.posted_at.isoformat() if last_post and last_post.posted_at else None,
+                "last_post_caption": (last_post.caption or "")[:50] if last_post else None,
                 "recent_posts": [
                     {
                         "id": p.id,
