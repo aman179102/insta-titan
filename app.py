@@ -1,7 +1,9 @@
 import os
 import json
+import time
 import threading
 from datetime import datetime
+import requests
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_socketio import SocketIO, emit
 from src.config_loader import load_config
@@ -46,6 +48,11 @@ def get_fetcher():
         from src.fetcher.orchestrator import FetcherOrchestrator
         _fetcher = FetcherOrchestrator(config, db)
     return _fetcher
+
+
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok", "timestamp": time.time()})
 
 
 @app.route("/")
@@ -240,10 +247,28 @@ def handle_connect():
     emit("connected", {"status": "ok"})
 
 
+def _self_pinger():
+    public_url = os.environ.get("RENDER_EXTERNAL_URL") or ui_config.get("public_url", "")
+    if not public_url:
+        logger.warning("Self-pinger disabled: no RENDER_EXTERNAL_URL or web_ui.public_url set")
+        return
+    health_url = f"{public_url.rstrip('/')}/health"
+    logger.info(f"Self-pinger started → pinging {health_url} every 5 min")
+    while True:
+        try:
+            requests.get(health_url, timeout=10)
+            logger.debug(f"Self-ping OK → {health_url}")
+        except Exception as e:
+            logger.warning(f"Self-ping failed: {e}")
+        time.sleep(300)
+
+
 def run_webui():
     host = ui_config.get("host", "0.0.0.0")
     port = ui_config.get("port", 5000)
     debug = ui_config.get("debug", False)
+    pinger = threading.Thread(target=_self_pinger, daemon=True)
+    pinger.start()
     logger.info(f"Web UI: http://{host}:{port}")
     socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)
 

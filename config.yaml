@@ -220,3 +220,6 @@ web_ui:
   debug: false
   secret_key: "change-this-to-random-secret"
   dark_mode: true
+  # Render deploy ke liye: app ka public URL yahan daalein
+  # (agar RENDER_EXTERNAL_URL env variable set hai toh wo priority lega)
+  public_url: ""
