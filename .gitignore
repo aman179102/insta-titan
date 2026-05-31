@@ -4,9 +4,6 @@
 data/
 *.db
 
-# Sessions
-sessions/
-
 # Downloads
 data/downloads/
 
