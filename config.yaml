@@ -90,7 +90,7 @@ sources:
     per_page: 30
 
   google_images:
-    enabled: false
+    enabled: true
     queries:
       - beautiful nature photography
       - stunning landscapes
