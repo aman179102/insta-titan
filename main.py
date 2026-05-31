@@ -10,6 +10,7 @@ import time
 import threading
 import argparse
 from datetime import datetime
+import requests
 from src.config_loader import load_config
 from src.db.models import Database
 from src.utils.helpers import logger, ensure_dir
@@ -70,12 +71,11 @@ Examples:
 
         scheduler.start()
 
-        web_config = config.get("web_ui", {})
-        if web_config.get("enabled", True):
-            from app import run_webui
-            web_thread = threading.Thread(target=run_webui, daemon=True)
-            web_thread.start()
-            logger.info(f"Web UI: http://{web_config.get('host', '0.0.0.0')}:{web_config.get('port', 5000)}")
+        pinger_thread = threading.Thread(target=_self_pinger, args=(config,), daemon=True)
+        pinger_thread.start()
+
+        telegram_thread = threading.Thread(target=_start_telegram, args=(config, db, fetcher, poster, scheduler), daemon=True)
+        telegram_thread.start()
 
         logger.info("InstaAuto is running. Press Ctrl+C to stop.")
 
@@ -182,6 +182,43 @@ Examples:
 
     else:
         parser.print_help()
+
+
+def _start_telegram(config, db, fetcher, poster, scheduler):
+    from src.notifications.telegram_bot import TelegramBot
+    bot = TelegramBot(config, db, fetcher, poster, scheduler)
+    logger.info("🤖 Telegram Bot starting...")
+    bot.run()
+
+
+def _self_pinger(config):
+    from src.db.models import Database
+    db_path = os.path.join(config.get("app", {}).get("data_dir", "data"), "instaauto.db")
+    pinger_db = Database(db_path)
+    public_url = os.environ.get("RENDER_EXTERNAL_URL") or config.get("web_ui", {}).get("public_url", "")
+    if not public_url:
+        logger.warning("Self-pinger disabled: no RENDER_EXTERNAL_URL or web_ui.public_url set")
+        return
+    health_url = f"{public_url.rstrip('/')}/health"
+    logger.info(f"Self-pinger started → pinging {health_url} every 5 min")
+    consecutive_failures = 0
+    while True:
+        try:
+            start = time.time()
+            requests.get(health_url, timeout=10)
+            elapsed = int((time.time() - start) * 1000)
+            pinger_db.log_ping(status="ok", duration_ms=elapsed)
+            consecutive_failures = 0
+            logger.debug(f"Self-ping OK → {health_url} ({elapsed}ms)")
+        except Exception as e:
+            try:
+                pinger_db.log_ping(status="failed", error_message=str(e))
+            except Exception:
+                pass
+            consecutive_failures += 1
+            logger.warning(f"Self-ping failed ({consecutive_failures}x): {e}")
+        finally:
+            time.sleep(300)
 
 
 if __name__ == "__main__":

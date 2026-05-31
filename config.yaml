@@ -222,7 +222,7 @@ security:
   request_delay_max: 3.0
 
 web_ui:
-  enabled: true
+  enabled: false
   host: 0.0.0.0
   port: 5000
   debug: false
