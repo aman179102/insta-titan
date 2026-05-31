@@ -182,8 +182,15 @@ def api_scheduler_stop():
 
 @app.route("/api/scheduler/post-now", methods=["POST"])
 def api_post_now():
-    success = get_scheduler().post_now()
-    return jsonify({"success": success})
+    try:
+        sched = get_scheduler()
+        q = db.queue_count()
+        if q == 0:
+            return jsonify({"success": False, "reason": "No images in queue. Fetch some first!"})
+        success = sched.post_now()
+        return jsonify({"success": success, "reason": None if success else "Post failed. Check logs."})
+    except Exception as e:
+        return jsonify({"success": False, "reason": str(e)})
 
 
 @app.route("/api/fetch", methods=["POST"])

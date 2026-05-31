@@ -129,24 +129,24 @@ class SmartScheduler:
             except Exception as e:
                 logger.error(f"Scheduler: Fetch error - {e}")
 
-    def _execute_post(self):
+    def _execute_post(self) -> bool:
         start_time = time.time()
         if not self.db or not self.poster:
             logger.error("Scheduler: DB or Poster not initialized")
-            return
+            return False
         queue = self.db.get_queue(status="queued", limit=1)
         if not queue:
             logger.warning("Scheduler: No posts in queue to execute")
             self._trigger_fetch()
-            return
+            return False
         post = queue[0]
         account_username = post.account_username or self._get_default_account()
         if not account_username:
             logger.error("Scheduler: No account configured")
-            return
-        if self.db.posts_posted_today(account_username) >= self.sched_config.get("max_posts_per_day", 3):
+            return False
+        if self.db.posts_posted_today(account_username) >= self.sched_config.get("max_posts_per_day", 99):
             logger.info(f"Scheduler: Daily limit reached for {account_username}")
-            return
+            return False
         logger.info(f"Scheduler: Posting {post.id} - {post.image_path[:50]}...")
         result = self.poster.post_photo(
             image_path=post.image_path,
@@ -167,6 +167,7 @@ class SmartScheduler:
             )
             logger.info(f"Scheduler: Posted successfully ({duration}ms)")
             self._schedule_next_post()
+            return True
         else:
             self.db.mark_failed(post.id, "Upload failed")
             self.db.log_scheduler(
@@ -183,6 +184,7 @@ class SmartScheduler:
                 name="Retry post",
                 replace_existing=True,
             )
+            return False
 
     def _get_default_account(self) -> str:
         accounts = self.config.get("instagram", {}).get("accounts", [])
@@ -193,8 +195,7 @@ class SmartScheduler:
 
     def post_now(self) -> bool:
         try:
-            self._execute_post()
-            return True
+            return self._execute_post()
         except Exception as e:
             logger.error(f"Scheduler: post_now failed - {e}")
             return False

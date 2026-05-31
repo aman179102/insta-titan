@@ -5,7 +5,7 @@
     <div>
         <span class="me-3"><span class="live-dot"></span> <small class="text-muted">System Active</small></span>
         <button class="btn btn-sm btn-outline-primary me-2" onclick="fetchImages()"><i class="bi bi-cloud-download"></i> Fetch Now</button>
-        <button class="btn btn-sm btn-primary" onclick="postNow()"><i class="bi bi-send"></i> Post Now</button>
+        <button class="btn btn-sm btn-success me-2" onclick="postNow()" id="btn-post"><i class="bi bi-send-fill"></i> <span id="btn-post-text">Post Now</span></button>
     </div>
 </div>
 
@@ -187,9 +187,24 @@ function fetchImages() {
 }
 
 function postNow() {
+    const btn = document.getElementById('btn-post');
+    const txt = document.getElementById('btn-post-text');
+    btn.disabled = true;
+    txt.textContent = 'Posting...';
     api('/api/scheduler/post-now', {method:'POST'}).then(d => {
-        alert(d?.success ? 'Posted!' : 'Failed to post');
+        if (d?.success) {
+            txt.textContent = '✅ Posted!';
+            btn.className = 'btn btn-sm btn-success me-2';
+        } else {
+            txt.textContent = d?.reason || '❌ Failed';
+            btn.className = 'btn btn-sm btn-danger me-2';
+        }
         loadStats();
+        setTimeout(() => {
+            txt.textContent = 'Post Now';
+            btn.className = 'btn btn-sm btn-success me-2';
+            btn.disabled = false;
+        }, 3000);
     });
 }
 
