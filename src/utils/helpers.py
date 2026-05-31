@@ -7,7 +7,6 @@ import string
 from pathlib import Path
 from datetime import datetime, timedelta
 from PIL import Image
-import imghdr
 import time
 
 logging.basicConfig(
@@ -75,8 +74,12 @@ def validate_image(image_path: str, min_width: int = 640, min_height: int = 640,
     file_size = os.path.getsize(image_path)
     if file_size > max_size_mb * 1024 * 1024:
         return False
-    img_type = imghdr.what(image_path)
-    if img_type not in ('jpeg', 'png', 'webp', 'bmp', 'gif'):
+    try:
+        with Image.open(image_path) as img:
+            img_type = img.format.lower() if img.format else ''
+            if img_type not in ('jpeg', 'png', 'webp', 'bmp', 'gif'):
+                return False
+    except:
         return False
     w, h = get_image_dimensions(image_path)
     if w < min_width or h < min_height:
