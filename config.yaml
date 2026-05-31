@@ -198,7 +198,7 @@ notifications:
   enabled: true
   console: true
   telegram:
-    enabled: false
+    enabled: true
   discord:
     enabled: false
     webhook_url: ""
