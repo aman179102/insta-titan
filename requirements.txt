@@ -34,8 +34,7 @@ ollama>=0.1.0
 sentence-transformers>=2.2.0
 pillow-heif>=0.13.0
 rembg>=2.0.0
-real-esrgan>=0.3.0
-opencv-python>=4.8.0
+opencv-python-headless>=4.8.0
 scikit-image>=0.22.0
 imagehash>=4.3.0
 
