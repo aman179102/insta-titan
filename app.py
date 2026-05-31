@@ -270,25 +270,35 @@ def _self_pinger():
         return
     health_url = f"{public_url.rstrip('/')}/health"
     logger.info(f"Self-pinger started → pinging {health_url} every 5 min")
+    consecutive_failures = 0
     while True:
         try:
             start = time.time()
             requests.get(health_url, timeout=10)
             elapsed = int((time.time() - start) * 1000)
             db.log_ping(status="ok", duration_ms=elapsed)
+            consecutive_failures = 0
             logger.debug(f"Self-ping OK → {health_url} ({elapsed}ms)")
         except Exception as e:
-            db.log_ping(status="failed", error_message=str(e))
-            logger.warning(f"Self-ping failed: {e}")
-        time.sleep(300)
+            try:
+                db.log_ping(status="failed", error_message=str(e))
+            except Exception:
+                pass
+            consecutive_failures += 1
+            logger.warning(f"Self-ping failed ({consecutive_failures}x): {e}")
+        finally:
+            time.sleep(300)
 
 
 def run_webui():
     host = ui_config.get("host", "0.0.0.0")
     port = ui_config.get("port", 5000)
     debug = ui_config.get("debug", False)
-    pinger = threading.Thread(target=_self_pinger, daemon=True)
-    pinger.start()
+    try:
+        pinger = threading.Thread(target=_self_pinger, daemon=True)
+        pinger.start()
+    except Exception as e:
+        logger.error(f"Self-pinger failed to start: {e}")
     logger.info(f"Web UI: http://{host}:{port}")
     socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)
 

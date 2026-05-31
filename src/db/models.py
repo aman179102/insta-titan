@@ -1,7 +1,7 @@
 import os
 import json
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, Float, JSON, Enum as SAEnum
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, Float, JSON, text, Enum as SAEnum
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import StaticPool
 import enum
@@ -110,6 +110,9 @@ class PingLog(Base):
     error_message = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    def __repr__(self):
+        return f"<PingLog {self.status} {self.created_at}>"
+
 
 class Account(Base):
     __tablename__ = "accounts"
@@ -137,10 +140,16 @@ class Database:
         os.makedirs(os.path.dirname(db_path) if os.path.dirname(db_path) else ".", exist_ok=True)
         self.engine = create_engine(
             f"sqlite:///{db_path}",
-            connect_args={"check_same_thread": False},
+            connect_args={"check_same_thread": False, "timeout": 15},
             poolclass=StaticPool,
             echo=False
         )
+        try:
+            with self.engine.connect() as conn:
+                conn.execute(text("PRAGMA journal_mode=WAL"))
+                conn.execute(text("PRAGMA synchronous=NORMAL"))
+        except Exception:
+            pass
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
 
