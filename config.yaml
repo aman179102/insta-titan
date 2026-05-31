@@ -98,10 +98,18 @@ sources:
     safe: active
 
   duckduckgo:
-    enabled: false
+    enabled: true
     queries:
-      - nature photography
+      - nature
       - landscape
+      - wildlife
+      - city
+      - travel
+      - mountain
+      - ocean
+      - forest
+      - sunset
+      - architecture
     per_page: 30
 
   local:
