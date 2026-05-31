@@ -37,9 +37,10 @@ class TelegramBot:
             app.add_handler(CommandHandler("sources", self.cmd_sources))
             app.add_handler(CommandHandler("settings", self.cmd_settings))
             app.add_handler(CommandHandler("set", self.cmd_set))
+            app.add_handler(CommandHandler("verify", self.cmd_verify))
             app.add_handler(CommandHandler("help", self.cmd_help))
 
-            logger.info("Telegram Bot started! Commands: /stats /queue /fetch /post /ping /health /sources /settings /set /help")
+            logger.info("Telegram Bot started! Commands: /stats /queue /fetch /post /ping /health /sources /settings /set /verify /help")
             app.run_polling(allowed_updates=Update.ALL_TYPES)
 
         except ImportError:
@@ -59,6 +60,7 @@ class TelegramBot:
             "/sources  — 🌐 Source-wise stats\n"
             "/settings — ⚙️ View current settings\n"
             "/set      — ✏️ Change settings (daily_posts, post_type)\n"
+            "/verify   — 📱 Instagram OTP code submit karein\n"
             "/help     — ℹ️ This message",
             parse_mode="Markdown"
         )
@@ -150,7 +152,10 @@ class TelegramBot:
             msg = f"❌ Failed to post."
             if reason:
                 msg += f"\n📋 Reason: {reason}"
-            msg += "\n\nTroubleshoot:\n• Instagram login might need OTP (check phone)\n• Session expired — /health se check karo\n• Instagram might be rate-limiting"
+            if self.poster and self.poster.pending_challenge:
+                msg += "\n\n📱 *Instagram OTP chahiye!*\nPhone check karo, code aane ke baad:\n`/verify 123456`",
+            else:
+                msg += "\n\nTroubleshoot:\n• Instagram login might need OTP (check phone)\n• Session expired — /health se check karo\n• Instagram might be rate-limiting"
             await update.message.reply_text(msg)
 
     async def cmd_ping(self, update, context):
@@ -210,6 +215,9 @@ class TelegramBot:
                 except Exception as e:
                     msg += f"❌ {acc['username']}: {e}\n"
         msg += "\nUse /stats for general stats."
+        if self.poster and self.poster.pending_challenge:
+            chall_users = ", ".join(self.poster.pending_challenge.keys())
+            msg += f"\n\n📱 *Pending OTP for:* {chall_users}\nPhone check karo, phir `/verify CODE`"
         await update.message.reply_text(msg, parse_mode="Markdown")
 
     async def cmd_sources(self, update, context):
@@ -300,6 +308,38 @@ class TelegramBot:
         else:
             await update.message.reply_text("❌ Setting save failed")
 
+    async def cmd_verify(self, update, context):
+        if not self.poster:
+            await update.message.reply_text("❌ Poster not available")
+            return
+        args = context.args
+        if not args:
+            msg = "❌ Usage: `/verify CODE`\n\n"
+            chall_users = list(self.poster.pending_challenge.keys())
+            if chall_users:
+                msg += f"⏳ Pending challenges: {', '.join(chall_users)}\n"
+                msg += "Apne phone par jo OTP aaya hai wo bhejein."
+            else:
+                msg += "Koi pending challenge nahi hai. Pehle /post ya /fetch karein."
+            await update.message.reply_text(msg, parse_mode="Markdown")
+            return
+        code = args[0]
+        chall_users = list(self.poster.pending_challenge.keys())
+        if not chall_users:
+            await update.message.reply_text("❌ Koi pending challenge nahi hai.")
+            return
+        username = chall_users[0]
+        ok = self.poster.submit_challenge_code(username, code)
+        if ok:
+            await update.message.reply_text(
+                f"✅ Challenge resolve ho gaya! `{username}` ab connected hai.\n"
+                "Ab /post use karein.",
+                parse_mode="Markdown"
+            )
+        else:
+            reason = self.poster.last_error or "unknown error"
+            await update.message.reply_text(f"❌ Verify fail: {reason}")
+
     async def cmd_help(self, update, context):
         await update.message.reply_text(
             "🤖 *InstaAuto Bot*\n\n"
@@ -314,6 +354,7 @@ class TelegramBot:
             "/sources  — Source-wise fetch/post stats\n"
             "/settings — View current settings\n"
             "/set      — Change settings\n"
+            "/verify   — Instagram OTP code submit karein\n"
             "/help     — This message\n\n"
             "⚡ Auto-ping har 5 min chal raha hai — server sleep nahi hoga.",
             parse_mode="Markdown"

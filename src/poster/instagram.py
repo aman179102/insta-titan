@@ -7,7 +7,7 @@ from typing import Optional, List
 from instagrapi import Client
 from instagrapi.exceptions import (
     LoginRequired, ChallengeRequired, PleaseWaitFewMinutes,
-    TwoFactorRequired, ClientError
+    TwoFactorRequired, ClientError, ReloginAttemptExceeded
 )
 from src.utils.helpers import logger, random_delay
 
@@ -19,6 +19,7 @@ class InstagramPoster:
         self.insta_config = config.get("instagram", {})
         self.clients = {}
         self.last_error = None
+        self.pending_challenge = {}  # username -> client for pending OTP
         self.session_dir = self.insta_config.get("session_dir", "sessions")
         os.makedirs(self.session_dir, exist_ok=True)
 
@@ -63,15 +64,10 @@ class InstagramPoster:
                     logger.info(f"Instagram: Logged in as {username}")
                     return cl
                 except ChallengeRequired:
-                    self.last_error = f"Instagram challenge required for {username} — check phone for OTP"
+                    self.last_error = f"Instagram challenge required for {username} — /verify CODE se OTP daalein"
                     logger.error(f"Instagram: {self.last_error}")
-                    challenge = cl.challenge_resolve(cl.last_json)
-                    if challenge:
-                        with open(session_path, "wb") as f:
-                            pickle.dump(cl, f)
-                        self.clients[username] = cl
-                        self.last_error = None
-                        return cl
+                    self.pending_challenge[username] = cl
+                    return None
                 except TwoFactorRequired:
                     self.last_error = "Instagram 2FA required — enter code via Instagram app"
                     logger.error(f"Instagram: {self.last_error}")
@@ -84,6 +80,47 @@ class InstagramPoster:
                 return None
         self.last_error = f"Account {username} not found in config"
         return None
+
+    def request_challenge_code(self, username: str) -> bool:
+        """Request Instagram to send OTP via SMS/email for challenge."""
+        cl = self.pending_challenge.get(username)
+        if not cl:
+            self.last_error = f"No pending challenge for {username}"
+            return False
+        try:
+            cl.challenge_request_code()
+            self.last_error = f"OTP sent to phone/email for {username}"
+            logger.info(f"Instagram: Challenge code requested for {username}")
+            return True
+        except Exception as e:
+            self.last_error = f"Challenge code request failed: {e}"
+            logger.error(f"Instagram: {self.last_error}")
+            return False
+
+    def submit_challenge_code(self, username: str, code: str) -> bool:
+        """Submit the OTP code received from Instagram challenge."""
+        cl = self.pending_challenge.get(username)
+        if not cl:
+            self.last_error = f"No pending challenge for {username}. Use /fetch or /post first."
+            return False
+        try:
+            result = cl.challenge_resolve(code=code)
+            if result:
+                session_path = os.path.join(self.session_dir, f"{username}.session")
+                with open(session_path, "wb") as f:
+                    pickle.dump(cl, f)
+                self.clients[username] = cl
+                self.pending_challenge.pop(username, None)
+                self.last_error = None
+                logger.info(f"Instagram: Challenge resolved for {username}")
+                return True
+            else:
+                self.last_error = "Challenge resolve returned False — try again"
+                return False
+        except Exception as e:
+            self.last_error = f"Challenge resolve failed: {e}"
+            logger.error(f"Instagram: {self.last_error}")
+            return False
 
     def post_photo(self, image_path: str, caption: str = "",
                    username: str = "", account_config: dict = None) -> Optional[dict]:
