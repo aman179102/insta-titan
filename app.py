@@ -15,7 +15,7 @@ config = load_config()
 ui_config = config.get("web_ui", {})
 app.secret_key = ui_config.get("secret_key", "instaauto-secret")
 app.config["WTF_CSRF_ENABLED"] = False
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 db_path = os.path.join(config.get("app", {}).get("data_dir", "data"), "instaauto.db")
 db = Database(db_path)
@@ -87,6 +87,11 @@ def config_page():
 @app.route("/analytics")
 def analytics_page():
     return render_template("analytics.html")
+
+
+@app.route("/logs")
+def logs_page():
+    return render_template("logs.html")
 
 
 @app.route("/api/stats")
@@ -312,7 +317,7 @@ def run_webui():
     except Exception as e:
         logger.error(f"Self-pinger failed to start: {e}")
     logger.info(f"Web UI: http://{host}:{port}")
-    socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)
+    socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True, use_reloader=False)
 
 
 if __name__ == "__main__":
