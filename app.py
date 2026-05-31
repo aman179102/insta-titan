@@ -292,7 +292,7 @@ def _self_pinger():
 
 def run_webui():
     host = ui_config.get("host", "0.0.0.0")
-    port = ui_config.get("port", 5000)
+    port = int(os.environ.get("PORT") or os.environ.get("FLASK_PORT") or ui_config.get("port", 5000))
     debug = ui_config.get("debug", False)
     try:
         pinger = threading.Thread(target=_self_pinger, daemon=True)
