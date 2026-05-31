@@ -1,1 +1,1 @@
-from .models import Database, PostQueue, PostedHistory, Source, SchedulerLog, Account
+from .models import Database, PostQueue, PostedHistory, Source, SchedulerLog, Account, Setting

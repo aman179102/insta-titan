@@ -19,13 +19,24 @@ class SmartScheduler:
         self.scheduler = BackgroundScheduler(daemon=True)
         self._running = False
 
+    def _get_max_posts_per_day(self) -> int:
+        cfg = self.sched_config.get("max_posts_per_day", 3)
+        if self.db:
+            try:
+                val = self.db.get_setting("max_posts_per_day", "")
+                if val and val.isdigit():
+                    return int(val)
+            except:
+                pass
+        return cfg
+
     def start(self):
         if not self.sched_config.get("enabled", True):
             logger.info("Scheduler: Disabled in config")
             return
         if self._running:
             return
-        posts_per_day = self.sched_config.get("max_posts_per_day", 3)
+        posts_per_day = self._get_max_posts_per_day()
         active_start = self.sched_config.get("active_hours_start", 10)
         active_end = self.sched_config.get("active_hours_end", 22)
         warmup = self.sched_config.get("gradual_warmup", True)
@@ -51,6 +62,12 @@ class SmartScheduler:
             self._running = False
             logger.info("Scheduler: Stopped")
 
+    def restart(self):
+        logger.info("Scheduler: Restarting...")
+        self.stop()
+        time.sleep(1)
+        self.start()
+
     def _schedule_next_post(self):
         times = self._get_posting_times()
         for i, post_time in enumerate(times):
@@ -65,7 +82,7 @@ class SmartScheduler:
             logger.info(f"Scheduler: Scheduled {len(times)} posts, next at {times[0].strftime('%H:%M')}")
 
     def _get_posting_times(self) -> List[datetime]:
-        posts_per_day = self.sched_config.get("max_posts_per_day", 3)
+        posts_per_day = self._get_max_posts_per_day()
         active_start = self.sched_config.get("active_hours_start", 10)
         active_end = self.sched_config.get("active_hours_end", 22)
         min_interval = self.sched_config.get("min_interval_minutes", 240)
@@ -144,8 +161,9 @@ class SmartScheduler:
         if not account_username:
             logger.error("Scheduler: No account configured")
             return False
-        if self.db.posts_posted_today(account_username) >= self.sched_config.get("max_posts_per_day", 99):
+        if self.db.posts_posted_today(account_username) >= self._get_max_posts_per_day():
             logger.info(f"Scheduler: Daily limit reached for {account_username}")
+            return False
             return False
         logger.info(f"Scheduler: Posting {post.id} - {post.image_path[:50]}...")
         result = self.poster.post_photo(
@@ -204,7 +222,8 @@ class SmartScheduler:
             account_username = q[0].account_username or self._get_default_account()
             if not account_username:
                 return (False, "No Instagram account configured")
-            if self.db.posts_posted_today(account_username) >= self.sched_config.get("max_posts_per_day", 99):
+            max_daily = self._get_max_posts_per_day()
+            if self.db.posts_posted_today(account_username) >= max_daily:
                 return (False, "Daily post limit reached for this account")
             ok = self._execute_post()
             reason = self.poster.last_error if not ok else None

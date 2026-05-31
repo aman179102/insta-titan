@@ -35,9 +35,11 @@ class TelegramBot:
             app.add_handler(CommandHandler("ping", self.cmd_ping))
             app.add_handler(CommandHandler("health", self.cmd_health))
             app.add_handler(CommandHandler("sources", self.cmd_sources))
+            app.add_handler(CommandHandler("settings", self.cmd_settings))
+            app.add_handler(CommandHandler("set", self.cmd_set))
             app.add_handler(CommandHandler("help", self.cmd_help))
 
-            logger.info("Telegram Bot started! Commands: /stats /queue /fetch /post /ping /health /sources /help")
+            logger.info("Telegram Bot started! Commands: /stats /queue /fetch /post /ping /health /sources /settings /set /help")
             app.run_polling(allowed_updates=Update.ALL_TYPES)
 
         except ImportError:
@@ -48,14 +50,16 @@ class TelegramBot:
             "🤖 *InstaAuto Bot — Production Ready*\n\n"
             "Ab aap Telegram se hi sab kuch control kar sakte ho.\n\n"
             "*Commands:*\n"
-            "/stats  — 📊 Queue, posted, sources summary\n"
-            "/queue  — 📦 View queued posts\n"
-            "/fetch  — 🔄 Fetch images from all sources\n"
-            "/post   — 📤 Post one now\n"
-            "/ping   — 📡 Check ping monitor status\n"
-            "/health — ❤️ Instagram account health\n"
-            "/sources — 🌐 Source-wise stats\n"
-            "/help   — ℹ️ This message",
+            "/stats    — 📊 Queue, posted, sources summary\n"
+            "/queue    — 📦 View queued posts\n"
+            "/fetch    — 🔄 Fetch images from all sources\n"
+            "/post     — 📤 Post one now\n"
+            "/ping     — 📡 Check ping monitor status\n"
+            "/health   — ❤️ Instagram account health\n"
+            "/sources  — 🌐 Source-wise stats\n"
+            "/settings — ⚙️ View current settings\n"
+            "/set      — ✏️ Change settings (daily_posts, post_type)\n"
+            "/help     — ℹ️ This message",
             parse_mode="Markdown"
         )
 
@@ -236,19 +240,81 @@ class TelegramBot:
         except Exception as e:
             await update.message.reply_text(f"❌ Error: {e}")
 
+    async def cmd_settings(self, update, context):
+        if not self.db:
+            await update.message.reply_text("❌ Database not available")
+            return
+        try:
+            settings = self.db.get_all_settings()
+            sched = self.config.get("scheduler", {})
+            cfg_posts = sched.get("max_posts_per_day", 3)
+            current_posts = settings.get("max_posts_per_day", str(cfg_posts))
+            current_type = settings.get("default_post_type", "photo")
+            msg = (
+                "⚙️ *Current Settings*\n\n"
+                f"📤 Daily posts: `{current_posts}`  (config default: {cfg_posts})\n"
+                f"🖼 Post type:  `{current_type}`\n\n"
+                "*Change karna hai?*\n"
+                "`/set daily_posts 5`  — daily post count (1-20)\n"
+                "`/set post_type reel`  — photo / carousel / reel / story"
+            )
+            await update.message.reply_text(msg, parse_mode="Markdown")
+        except Exception as e:
+            await update.message.reply_text(f"❌ Error: {e}")
+
+    async def cmd_set(self, update, context):
+        if not self.db:
+            await update.message.reply_text("❌ Database not available")
+            return
+        args = context.args
+        if len(args) != 2:
+            await update.message.reply_text(
+                "❌ Usage: `/set key value`\n\n"
+                "Examples:\n"
+                "`/set daily_posts 5`\n"
+                "`/set post_type reel`",
+                parse_mode="Markdown"
+            )
+            return
+        key, value = args[0].lower(), args[1].lower()
+        valid_keys = {"daily_posts", "post_type"}
+        if key not in valid_keys:
+            await update.message.reply_text(f"❌ Invalid key. Use: {', '.join(valid_keys)}")
+            return
+        if key == "daily_posts":
+            if not value.isdigit() or not (1 <= int(value) <= 20):
+                await update.message.reply_text("❌ Daily posts must be 1-20")
+                return
+        if key == "post_type":
+            if value not in ("photo", "carousel", "reel", "story"):
+                await update.message.reply_text("❌ Post type must be: photo, carousel, reel, or story")
+                return
+        ok = self.db.set_setting(key, value)
+        if ok:
+            msg = f"✅ `{key}` → `{value}` set kar diya!"
+            if key == "daily_posts":
+                msg += "\n🔄 Scheduler restart ho raha hai..."
+                if self.scheduler:
+                    self.scheduler.restart()
+            await update.message.reply_text(msg, parse_mode="Markdown")
+        else:
+            await update.message.reply_text("❌ Setting save failed")
+
     async def cmd_help(self, update, context):
         await update.message.reply_text(
             "🤖 *InstaAuto Bot*\n\n"
             "*Commands:*\n"
             "/start  — Welcome & intro\n"
-            "/stats  — Queue, posted, ping status\n"
-            "/queue  — Show queued posts (top 10)\n"
-            "/fetch  — Fetch images from all sources\n"
-            "/post   — Post one queued image now\n"
-            "/ping   — Live ping monitor status\n"
-            "/health — Instagram account health check\n"
-            "/sources — Source-wise fetch/post stats\n"
-            "/help   — This message\n\n"
+            "/stats    — Queue, posted, ping status\n"
+            "/queue    — Show queued posts (top 10)\n"
+            "/fetch    — Fetch images from all sources\n"
+            "/post     — Post one queued image now\n"
+            "/ping     — Live ping monitor status\n"
+            "/health   — Instagram account health check\n"
+            "/sources  — Source-wise fetch/post stats\n"
+            "/settings — View current settings\n"
+            "/set      — Change settings\n"
+            "/help     — This message\n\n"
             "⚡ Auto-ping har 5 min chal raha hai — server sleep nahi hoga.",
             parse_mode="Markdown"
         )

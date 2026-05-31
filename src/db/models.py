@@ -114,6 +114,15 @@ class PingLog(Base):
         return f"<PingLog {self.status} {self.created_at}>"
 
 
+class Setting(Base):
+    __tablename__ = "settings"
+
+    id = Column(Integer, primary_key=True)
+    key = Column(String(100), nullable=False, unique=True)
+    value = Column(Text, default="")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class Account(Base):
     __tablename__ = "accounts"
 
@@ -308,6 +317,40 @@ class Database:
         session = self.get_session()
         try:
             return session.query(PingLog).order_by(PingLog.created_at.desc()).first()
+        finally:
+            session.close()
+
+    def get_setting(self, key: str, default: str = "") -> str:
+        session = self.get_session()
+        try:
+            entry = session.query(Setting).filter(Setting.key == key).first()
+            return entry.value if entry else default
+        finally:
+            session.close()
+
+    def set_setting(self, key: str, value: str) -> bool:
+        session = self.get_session()
+        try:
+            entry = session.query(Setting).filter(Setting.key == key).first()
+            if entry:
+                entry.value = value
+                entry.updated_at = datetime.utcnow()
+            else:
+                entry = Setting(key=key, value=value)
+                session.add(entry)
+            session.commit()
+            return True
+        except:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+    def get_all_settings(self) -> dict:
+        session = self.get_session()
+        try:
+            entries = session.query(Setting).all()
+            return {e.key: e.value for e in entries}
         finally:
             session.close()
 

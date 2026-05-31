@@ -73,6 +73,7 @@ class BaseFetcher(ABC):
         if not self.db or not results:
             return
         count = 0
+        post_type = self.db.get_setting("default_post_type", "photo")
         for r in results:
             try:
                 if os.path.exists(r["image_path"]):
@@ -82,6 +83,7 @@ class BaseFetcher(ABC):
                         source=r["source"],
                         source_url=r.get("source_url", ""),
                         tags=r.get("tags", []),
+                        post_type=post_type,
                     )
                     count += 1
             except Exception as e:
