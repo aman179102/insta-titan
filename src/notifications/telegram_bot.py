@@ -139,11 +139,15 @@ class TelegramBot:
                 await update.message.reply_text("📭 No images in queue. Use /fetch first!")
                 return
         await update.message.reply_text("📤 Posting now...")
-        success = self.scheduler.post_now()
+        success, reason = self.scheduler.post_now()
         if success:
             await update.message.reply_text("✅ Posted successfully to Instagram!")
         else:
-            await update.message.reply_text("❌ Failed to post. Check logs or use /queue to see available posts.")
+            msg = f"❌ Failed to post."
+            if reason:
+                msg += f"\n📋 Reason: {reason}"
+            msg += "\n\nTroubleshoot:\n• Instagram login might need OTP (check phone)\n• Session expired — /health se check karo\n• Instagram might be rate-limiting"
+            await update.message.reply_text(msg)
 
     async def cmd_ping(self, update, context):
         if not self.db:
@@ -197,6 +201,8 @@ class TelegramBot:
                     score = self.poster.check_health(acc["username"])
                     icon = "🟢" if score >= 80 else "🟡" if score >= 50 else "🔴"
                     msg += f"{icon} {acc['username']}: {score:.0f}%\n"
+                    if score == 0 and self.poster.last_error:
+                        msg += f"  ⚠️ {self.poster.last_error}\n"
                 except Exception as e:
                     msg += f"❌ {acc['username']}: {e}\n"
         msg += "\nUse /stats for general stats."

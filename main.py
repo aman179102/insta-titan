@@ -114,8 +114,11 @@ Examples:
 
     elif cmd == "post-now":
         print("📤 Posting now...")
-        success = scheduler.post_now()
-        print("✅ Posted!" if success else "❌ Failed to post")
+        success, reason = scheduler.post_now()
+        if success:
+            print("✅ Posted!")
+        else:
+            print(f"❌ Failed: {reason or 'Unknown error'}")
 
     elif cmd == "search":
         q = args.query

@@ -18,10 +18,12 @@ class InstagramPoster:
         self.db = db
         self.insta_config = config.get("instagram", {})
         self.clients = {}
+        self.last_error = None
         self.session_dir = self.insta_config.get("session_dir", "sessions")
         os.makedirs(self.session_dir, exist_ok=True)
 
     def _get_client(self, username: str) -> Optional[Client]:
+        self.last_error = None
         if username in self.clients:
             try:
                 self.clients[username].get_timeline_feed()
@@ -50,7 +52,8 @@ class InstagramPoster:
             if account.get("username") == username:
                 password = account.get("password", "")
                 if not password:
-                    logger.error(f"Instagram: No password for {username}")
+                    self.last_error = f"No password configured for {username}"
+                    logger.error(f"Instagram: {self.last_error}")
                     return None
                 try:
                     cl.login(username, password)
@@ -60,20 +63,27 @@ class InstagramPoster:
                     logger.info(f"Instagram: Logged in as {username}")
                     return cl
                 except ChallengeRequired:
-                    logger.error(f"Instagram: Challenge required for {username}")
+                    self.last_error = f"Instagram challenge required for {username} — check phone for OTP"
+                    logger.error(f"Instagram: {self.last_error}")
                     challenge = cl.challenge_resolve(cl.last_json)
                     if challenge:
                         with open(session_path, "wb") as f:
                             pickle.dump(cl, f)
                         self.clients[username] = cl
+                        self.last_error = None
                         return cl
                 except TwoFactorRequired:
-                    logger.error("Instagram: 2FA required")
+                    self.last_error = "Instagram 2FA required — enter code via Instagram app"
+                    logger.error(f"Instagram: {self.last_error}")
                 except PleaseWaitFewMinutes as e:
-                    logger.error(f"Instagram: Rate limited - {e}")
+                    self.last_error = f"Instagram rate limited: {e}"
+                    logger.error(f"Instagram: {self.last_error}")
                 except Exception as e:
+                    self.last_error = f"Login error: {e}"
                     logger.error(f"Instagram: Login failed for {username}: {e}")
                 return None
+        self.last_error = f"Account {username} not found in config"
+        return None
 
     def post_photo(self, image_path: str, caption: str = "",
                    username: str = "", account_config: dict = None) -> Optional[dict]:
@@ -92,7 +102,8 @@ class InstagramPoster:
                     account["posts_today"] = 0
                 max_posts = account.get("max_posts_per_day", 3)
                 if posts_today >= max_posts:
-                    logger.warning(f"Instagram: {username} reached daily limit ({max_posts})")
+                    self.last_error = f"Account {username} reached daily Instagram limit ({max_posts})"
+                    logger.warning(f"Instagram: {self.last_error}")
                     return None
             media = cl.photo_upload(image_path, caption)
             result = {
@@ -115,10 +126,12 @@ class InstagramPoster:
                 os.remove(session_path)
             return self.post_photo(image_path, caption, username, account_config)
         except PleaseWaitFewMinutes as e:
-            logger.error(f"Instagram: Rate limited - waiting... {e}")
+            self.last_error = f"Instagram rate limited: {e}"
+            logger.error(f"Instagram: {self.last_error}")
             return None
         except Exception as e:
-            logger.error(f"Instagram: Upload error - {e}")
+            self.last_error = f"Upload error: {e}"
+            logger.error(f"Instagram: {self.last_error}")
             return None
 
     def _get_account_config(self, username: str) -> Optional[dict]:

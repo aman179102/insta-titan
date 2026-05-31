@@ -169,14 +169,15 @@ class SmartScheduler:
             self._schedule_next_post()
             return True
         else:
-            self.db.mark_failed(post.id, "Upload failed")
+            err_msg = "Instagram login failed or upload rejected. Check credentials."
+            self.db.mark_failed(post.id, err_msg)
             self.db.log_scheduler(
                 action="post_photo", status="failed",
-                message="Upload failed",
+                message=err_msg,
                 account=account_username, post_id=post.id, duration_ms=duration
             )
             cooldown = self.sched_config.get("cooldown_hours", 24)
-            logger.error(f"Scheduler: Post failed, cooling down for {cooldown}h")
+            logger.error(f"Scheduler: Post failed ({err_msg}), cooling down for {cooldown}h")
             self.scheduler.add_job(
                 self._execute_post,
                 DateTrigger(run_date=datetime.now() + timedelta(hours=cooldown)),
@@ -193,12 +194,24 @@ class SmartScheduler:
                 return acc["username"]
         return ""
 
-    def post_now(self) -> bool:
+    def post_now(self) -> tuple:
         try:
-            return self._execute_post()
+            if not self.db or not self.poster:
+                return (False, "Scheduler DB or Poster not initialized")
+            q = self.db.get_queue(status="queued", limit=1)
+            if not q:
+                return (False, "Queue is empty. Use /fetch first!")
+            account_username = q[0].account_username or self._get_default_account()
+            if not account_username:
+                return (False, "No Instagram account configured")
+            if self.db.posts_posted_today(account_username) >= self.sched_config.get("max_posts_per_day", 99):
+                return (False, "Daily post limit reached for this account")
+            ok = self._execute_post()
+            reason = self.poster.last_error if not ok else None
+            return (ok, reason)
         except Exception as e:
             logger.error(f"Scheduler: post_now failed - {e}")
-            return False
+            return (False, str(e))
 
     def get_status(self) -> dict:
         jobs = self.scheduler.get_jobs()

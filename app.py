@@ -187,8 +187,10 @@ def api_post_now():
         q = db.queue_count()
         if q == 0:
             return jsonify({"success": False, "reason": "No images in queue. Fetch some first!"})
-        success = sched.post_now()
-        return jsonify({"success": success, "reason": None if success else "Post failed. Check logs."})
+        success, reason = sched.post_now()
+        if not success:
+            return jsonify({"success": False, "reason": reason or "Post failed. Check logs."})
+        return jsonify({"success": True, "reason": None})
     except Exception as e:
         return jsonify({"success": False, "reason": str(e)})
 
