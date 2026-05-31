@@ -13,12 +13,13 @@ from src.utils.helpers import logger, random_delay
 
 
 class InstagramPoster:
-    def __init__(self, config: dict, db=None):
+    def __init__(self, config: dict, db=None, notify_callback=None):
         self.config = config
         self.db = db
         self.insta_config = config.get("instagram", {})
         self.clients = {}
         self.last_error = None
+        self.notify_callback = notify_callback
         self.pending_challenge = {}  # username -> client for pending OTP
         self.session_dir = self.insta_config.get("session_dir", "sessions")
         os.makedirs(self.session_dir, exist_ok=True)
@@ -67,6 +68,14 @@ class InstagramPoster:
                     self.last_error = f"Instagram challenge required for {username} — /verify CODE se OTP daalein"
                     logger.error(f"Instagram: {self.last_error}")
                     self.pending_challenge[username] = cl
+                    if self.notify_callback:
+                        self.notify_callback(
+                            f"🔐 *Instagram OTP Required!*\n\n"
+                            f"Account: `{username}`\n"
+                            f"Phone/email pe OTP check karo.\n\n"
+                            f"Phir ye likho:\n"
+                            f"`/verify CODE`"
+                        )
                     return None
                 except TwoFactorRequired:
                     self.last_error = "Instagram 2FA required — enter code via Instagram app"

@@ -142,6 +142,7 @@ Examples:
     elif cmd == "telegram":
         from src.notifications.telegram_bot import TelegramBot
         bot = TelegramBot(config, db, fetcher, poster, scheduler)
+        poster.notify_callback = bot.send_alert
         print("🤖 Telegram Bot starting...")
         bot.run()
 
@@ -223,6 +224,7 @@ def _status_logger(db):
 def _start_telegram(config, db, fetcher, poster, scheduler):
     from src.notifications.telegram_bot import TelegramBot
     bot = TelegramBot(config, db, fetcher, poster, scheduler)
+    poster.notify_callback = bot.send_alert
     logger.info("🤖 Telegram Bot starting...")
     bot.run()
 

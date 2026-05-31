@@ -16,6 +16,25 @@ class TelegramBot:
         self.bot_token = config.get("notifications", {}).get("telegram", {}).get("bot_token", "")
         self.chat_id = config.get("notifications", {}).get("telegram", {}).get("chat_id", "")
 
+    def send_alert(self, text: str):
+        """Send a proactive alert to the Telegram chat via HTTP API."""
+        if not self.bot_token or not self.chat_id:
+            logger.warning("Telegram alert: bot_token or chat_id missing")
+            return
+        try:
+            import requests
+            url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+            payload = {
+                "chat_id": self.chat_id,
+                "text": text,
+                "parse_mode": "Markdown",
+            }
+            r = requests.post(url, json=payload, timeout=10)
+            if r.status_code != 200:
+                logger.error(f"Telegram alert failed: {r.text}")
+        except Exception as e:
+            logger.error(f"Telegram alert error: {e}")
+
     def run(self):
         try:
             from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
