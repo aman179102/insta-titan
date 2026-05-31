@@ -55,6 +55,15 @@ def health():
     return jsonify({"status": "ok", "timestamp": time.time()})
 
 
+@app.route("/status")
+def app_status():
+    try:
+        q = db.queue_count()
+        return jsonify({"status": "ok", "queue_count": q})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
 @app.route("/")
 def dashboard():
     return render_template("dashboard.html", config=config)
@@ -142,13 +151,16 @@ def api_history():
 
 @app.route("/api/scheduler/status")
 def api_scheduler_status():
-    sched = get_scheduler()
-    status = sched.get_status()
-    return jsonify({
-        "running": status["running"],
-        "next_post": status["next_post"].isoformat() if status["next_post"] else None,
-        "queue_count": status["queue_count"],
-    })
+    try:
+        sched = get_scheduler()
+        status = sched.get_status()
+        return jsonify({
+            "running": status["running"],
+            "next_post": status["next_post"].isoformat() if status["next_post"] else None,
+            "queue_count": status["queue_count"],
+        })
+    except Exception as e:
+        return jsonify({"running": False, "next_post": None, "queue_count": 0, "error": str(e)}), 500
 
 
 @app.route("/api/scheduler/start", methods=["POST"])

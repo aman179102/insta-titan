@@ -114,8 +114,13 @@ function timeAgo(dateStr) {
     return `${days}d ago`;
 }
 
+function api(url, opts) {
+    return fetch(url, { signal: AbortSignal.timeout(5000), ...opts }).then(r => r.json()).catch(() => null);
+}
+
 function loadStats() {
-    fetch('/api/stats').then(r => r.json()).then(d => {
+    api('/api/stats').then(d => {
+        if (!d) return;
         document.getElementById('stat-queued').textContent = d.total_queued || 0;
         document.getElementById('stat-today').textContent = d.posted_today || 0;
         document.getElementById('stat-total').textContent = d.total_posted || 0;
@@ -152,7 +157,8 @@ function loadStats() {
 }
 
 function loadPingStats() {
-    fetch('/api/ping/stats').then(r => r.json()).then(d => {
+    api('/api/ping/stats').then(d => {
+        if (!d) return;
         const el = document.getElementById('stat-ping');
         const dot = document.getElementById('ping-indicator');
         if (!d.last_ping) {
@@ -174,16 +180,15 @@ function loadPingStats() {
 }
 
 function fetchImages() {
-    fetch('/api/fetch', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source:'all'})})
-    .then(r=>r.json()).then(d=>{
-        alert(`Fetched ${d.fetched} images!`);
+    api('/api/fetch', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source:'all'})}).then(d => {
+        alert(`Fetched ${d?.fetched || 0} images!`);
         loadStats();
     });
 }
 
 function postNow() {
-    fetch('/api/scheduler/post-now', {method:'POST'}).then(r=>r.json()).then(d=>{
-        alert(d.success ? 'Posted!' : 'Failed to post');
+    api('/api/scheduler/post-now', {method:'POST'}).then(d => {
+        alert(d?.success ? 'Posted!' : 'Failed to post');
         loadStats();
     });
 }
