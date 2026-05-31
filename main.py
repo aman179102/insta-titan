@@ -77,6 +77,9 @@ Examples:
         status_thread = threading.Thread(target=_status_logger, args=(db,), daemon=True)
         status_thread.start()
 
+        health_thread = threading.Thread(target=_health_server, args=(config, db), daemon=True)
+        health_thread.start()
+
         logger.info("🤖 Telegram Bot starting (main thread)...")
         _start_telegram(config, db, fetcher, poster, scheduler)
 
@@ -172,6 +175,27 @@ Examples:
 
     else:
         parser.print_help()
+
+
+def _health_server(config, db):
+    try:
+        from flask import Flask, jsonify
+        app = Flask(__name__)
+        port = int(os.environ.get("PORT") or config.get("web_ui", {}).get("port", 5000))
+
+        @app.route("/health")
+        def health():
+            return jsonify({"status": "ok", "timestamp": time.time()})
+
+        @app.route("/status")
+        def status():
+            q = db.queue_count()
+            return jsonify({"status": "ok", "queue_count": q})
+
+        logger.info(f"Health server: http://0.0.0.0:{port}")
+        app.run(host="0.0.0.0", port=port, debug=False)
+    except Exception as e:
+        logger.error(f"Health server failed: {e}")
 
 
 def _status_logger(db):
